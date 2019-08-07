@@ -38,6 +38,142 @@
 #define MAX_DEV_STR_LEN               32
 #define MAX_MSG_SIZE                1024
 
+
+// C1 - B1
+#define MICRO_PERIOD_C1  30581
+#define MICRO_PERIOD_Db1 28860
+#define MICRO_PERIOD_D1  27241
+#define MICRO_PERIOD_Eb1 25714
+#define MICRO_PERIOD_E1  24272
+#define MICRO_PERIOD_F1  22910
+#define MICRO_PERIOD_Gb1 21622
+#define MICRO_PERIOD_G1  20408
+#define MICRO_PERIOD_Ab1 19264
+#define MICRO_PERIOD_A1  18182
+#define MICRO_PERIOD_Bb1 17161
+#define MICRO_PERIOD_B1  16197
+
+// C2 - B2
+#define MICRO_PERIOD_C2  15288
+#define MICRO_PERIOD_Db2 14430
+#define MICRO_PERIOD_D2  13620
+#define MICRO_PERIOD_Eb2 12857
+#define MICRO_PERIOD_E2  12134
+#define MICRO_PERIOD_F2  11453
+#define MICRO_PERIOD_Gb2 10811
+#define MICRO_PERIOD_G2  10204
+#define MICRO_PERIOD_Ab2 9631
+#define MICRO_PERIOD_A2  9091
+#define MICRO_PERIOD_Bb2 8581
+#define MICRO_PERIOD_B2  8099
+
+// C3 - B3
+#define MICRO_PERIOD_C3  7645
+#define MICRO_PERIOD_Db3 7216
+#define MICRO_PERIOD_D3  6811
+#define MICRO_PERIOD_Eb3 6428
+#define MICRO_PERIOD_E3  6068
+#define MICRO_PERIOD_F3  5727
+#define MICRO_PERIOD_Gb3 5405
+#define MICRO_PERIOD_G3  5102
+#define MICRO_PERIOD_Ab3 4816
+#define MICRO_PERIOD_A3  4545
+#define MICRO_PERIOD_Bb3 4290
+#define MICRO_PERIOD_B3  4050
+
+// C4 - B4
+#define MICRO_PERIOD_C4  3822
+#define MICRO_PERIOD_Db4 3608
+#define MICRO_PERIOD_D4  3405
+#define MICRO_PERIOD_Eb4 3214
+#define MICRO_PERIOD_E4  3034
+#define MICRO_PERIOD_F4  2863
+#define MICRO_PERIOD_Gb4 2703
+#define MICRO_PERIOD_G4  2551
+#define MICRO_PERIOD_Ab4 2408
+#define MICRO_PERIOD_A4  2273
+#define MICRO_PERIOD_Bb4 2145
+#define MICRO_PERIOD_B4  2025
+
+const uint16_t MicroPeriods[48] = {
+	// C1 - B1
+	MICRO_PERIOD_C1,
+	MICRO_PERIOD_Db1,
+	MICRO_PERIOD_D1,
+	MICRO_PERIOD_Eb1,
+	MICRO_PERIOD_E1,
+	MICRO_PERIOD_F1,
+	MICRO_PERIOD_Gb1,
+	MICRO_PERIOD_G1,
+	MICRO_PERIOD_Ab1,
+	MICRO_PERIOD_A1,
+	MICRO_PERIOD_Bb1,
+	MICRO_PERIOD_B1,
+
+	// C2 - B2
+	MICRO_PERIOD_C2,
+	MICRO_PERIOD_Db2,
+	MICRO_PERIOD_D2,
+	MICRO_PERIOD_Eb2,
+	MICRO_PERIOD_E2,
+	MICRO_PERIOD_F2,
+	MICRO_PERIOD_Gb2,
+	MICRO_PERIOD_G2,
+	MICRO_PERIOD_Ab2,
+	MICRO_PERIOD_A2,
+	MICRO_PERIOD_Bb2,
+	MICRO_PERIOD_B2,
+
+	// C3 - B3
+	MICRO_PERIOD_C3,
+	MICRO_PERIOD_Db3,
+	MICRO_PERIOD_D3,
+	MICRO_PERIOD_Eb3,
+	MICRO_PERIOD_E3,
+	MICRO_PERIOD_F3,
+	MICRO_PERIOD_Gb3,
+	MICRO_PERIOD_G3,
+	MICRO_PERIOD_Ab3,
+	MICRO_PERIOD_A3,
+	MICRO_PERIOD_Bb3,
+	MICRO_PERIOD_B3,
+
+	// C4 - B4
+	MICRO_PERIOD_C4,
+	MICRO_PERIOD_Db4,
+	MICRO_PERIOD_D4,
+	MICRO_PERIOD_Eb4,
+	MICRO_PERIOD_E4,
+	MICRO_PERIOD_F4,
+	MICRO_PERIOD_Gb4,
+	MICRO_PERIOD_G4,
+	MICRO_PERIOD_Ab4,
+	MICRO_PERIOD_A4,
+	MICRO_PERIOD_Bb4,
+	MICRO_PERIOD_B4
+};
+
+uint16_t moppyNotes[48];
+uint16_t arduinoResolution = 80;
+static const int8_t NoteOffset = 24;
+uint8_t NoteRange = 48;
+
+void setResolution() {
+    for (uint8_t i = 0; i < NoteRange; i++) {
+        moppyNotes[i] = MicroPeriods[i] / arduinoResolution;
+    }
+}
+
+uint16_t get_period(uint8_t note) {
+    if(note < NoteOffset || note >= (NoteOffset + NoteRange)){
+		return 0;
+	}
+
+    return moppyNotes[note - NoteOffset];
+}
+
+
+
 /* change this definition for the correct port */
 //#define _POSIX_SOURCE 1 /* POSIX compliant source */
 
@@ -160,7 +296,7 @@ int open_seq(snd_seq_t** seq)
 		exit(1);
 	}
 
-	snd_seq_set_client_name(*seq, arguments.name);
+	snd_seq_set_client_name(*seq, "MoppyMIDI");
 
 	if ((port_out_id = snd_seq_create_simple_port(*seq, "MIDI out",
 					SND_SEQ_PORT_CAP_READ|SND_SEQ_PORT_CAP_SUBS_READ,
@@ -281,7 +417,8 @@ void parse_midi_command(snd_seq_t* seq, int port_out_id, char *buf)
 void write_midi_action_to_serial_port(snd_seq_t* seq_handle) 
 {
 	snd_seq_event_t* ev;
-	char bytes[] = {0x00, 0x00, 0xFF}; 
+	uint8_t bytes[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; 
+    uint8_t length = 0;
 
 	do 
 	{
@@ -291,81 +428,58 @@ void write_midi_action_to_serial_port(snd_seq_t* seq_handle)
 		{
 
 			case SND_SEQ_EVENT_NOTEOFF: 
-				bytes[0] = 0x80 + ev->data.control.channel;
-				bytes[1] = ev->data.note.note;
-				bytes[2] = ev->data.note.velocity;        
-				if (!arguments.silent && arguments.verbose) 
-					printf("Alsa    0x%x Note off           %03u %03u %03u\n", bytes[0]&0xF0, bytes[0]&0xF, bytes[1], bytes[2]); 
+               bytes[0] = 0x4d; //magic number
+               bytes[1] = 1;
+               bytes[2] = ev->data.control.channel + 1;
+               bytes[3] = 2; //length
+               bytes[4] = 0x08; //command
+               bytes[5] = ev->data.note.note; //payload (note)
+length = 6;
+
+               if (!arguments.silent && arguments.verbose) {
+                   printf("Alsa    Note off           %03u %03u %03u\n", bytes[0], bytes[1], bytes[2]);
+                   printf("MIDI    Note off           %03u %03u\n", ev->data.control.channel, ev->data.note.note);
+                   printf("%02x %02x %02x %02x %02x %02x\n", bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5]);
+}
 				break; 
 
 			case SND_SEQ_EVENT_NOTEON:
-				bytes[0] = 0x90 + ev->data.control.channel;
-				bytes[1] = ev->data.note.note;
-				bytes[2] = ev->data.note.velocity;        
-				if (!arguments.silent && arguments.verbose) 
-					printf("Alsa    0x%x Note on            %03u %03u %03u\n", bytes[0]&0xF0, bytes[0]&0xF, bytes[1], bytes[2]); 
+                               bytes[0] = 0x4d; //magic number
+                               bytes[1] = 1;
+                               bytes[2] = ev->data.control.channel + 1;
+                               bytes[3] = 3; //length
+                               bytes[4] = 0x09; //command
+                               bytes[5] = ev->data.note.note; //payload (note)
+                               bytes[6] = ev->data.note.velocity; //payload (velocity)
+                length = 7;
+
+                               if (!arguments.silent && arguments.verbose) {
+                                       printf("Alsa    Note on            %03u %03u %03u\n", bytes[0], bytes[1], bytes[2]);
+                                       printf("MIDI    Note on            %03u %03u\n", ev->data.control.channel, ev->data.note.note);
+                    printf("%02x %02x %02x %02x %02x %02x %02x\n", bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6]);
+                }
 				break;        
 
-			case SND_SEQ_EVENT_KEYPRESS: 
-				bytes[0] = 0x90 + ev->data.control.channel;
-				bytes[1] = ev->data.note.note;
-				bytes[2] = ev->data.note.velocity;        
-				if (!arguments.silent && arguments.verbose) 
-					printf("Alsa    0x%x Pressure change    %03u %03u %03u\n", bytes[0]&0xF0, bytes[0]&0xF, bytes[1], bytes[2]); 
-				break;       
-
 			case SND_SEQ_EVENT_CONTROLLER: 
-				bytes[0] = 0xB0 + ev->data.control.channel;
-				bytes[1] = ev->data.control.param;
-				bytes[2] = ev->data.control.value;
-				if (!arguments.silent && arguments.verbose) 
-					printf("Alsa    0x%x Controller change  %03u %03u %03u\n", bytes[0]&0xF0, bytes[0]&0xF, bytes[1], bytes[2]); 
-				break;   
-
-			case SND_SEQ_EVENT_PGMCHANGE: 
-				bytes[0] = 0xC0 + ev->data.control.channel;
-				bytes[1] = ev->data.control.value;
-				if (!arguments.silent && arguments.verbose) 
-					printf("Alsa    0x%x Program change     %03u %03u \n", bytes[0]&0xF0, bytes[0]&0xF, bytes[1]); 
-				break;  
-
-			case SND_SEQ_EVENT_CHANPRESS: 
-				bytes[0] = 0xD0 + ev->data.control.channel;
-				bytes[1] = ev->data.control.value;
-				if (!arguments.silent && arguments.verbose) 
-					printf("Alsa    0x%x Channel change     %03u %03u \n", bytes[0]&0xF0, bytes[0]&0xF, bytes[1]); 
-				break;  
-
-			case SND_SEQ_EVENT_PITCHBEND:
-				bytes[0] = 0xE0 + ev->data.control.channel;
-				ev->data.control.value += 8192;
-				bytes[1] = (int)ev->data.control.value & 0x7F;
-				bytes[2] = (int)ev->data.control.value >> 7;
-				if (!arguments.silent && arguments.verbose) 
-					printf("Alsa    0x%x Pitch bend         %03u %5d\n", bytes[0]&0xF0, bytes[0]&0xF, ev->data.control.value);
-				break;
+                            if (ev->data.control.param == 123) { //all notes off
+                    bytes[0] = 0x4d; //magic number
+                    bytes[1] = 1;
+                    bytes[2] = ev->data.control.channel + 1;
+                    bytes[3] = 2; //length
+                    bytes[4] = 0x08; //command
+                    bytes[5] = 0;
+                    length = 6;
+                    printf("stopping notes on channel %u\n", ev->data.control.channel);
+                }
+                break;
 
 			default:
 				break;
 		}
 
-    bytes[1] = (bytes[1] & 0x7F);
-
-    switch (ev->type) 
-		{
-      case SND_SEQ_EVENT_NOTEOFF:
-      case SND_SEQ_EVENT_NOTEON:
-      case SND_SEQ_EVENT_KEYPRESS: 
-      case SND_SEQ_EVENT_CONTROLLER: 
-      case SND_SEQ_EVENT_PITCHBEND:
-        bytes[2] = (bytes[2] & 0x7F);
-				write(serial, bytes, 3);
-        break;
-      case SND_SEQ_EVENT_PGMCHANGE: 
-      case SND_SEQ_EVENT_CHANPRESS:
-        write(serial, bytes, 2);
-        break;
-    }
+        if (length) {
+            write(serial, bytes, length);
+        }
 
 		snd_seq_free_event(ev);
 
@@ -483,6 +597,7 @@ void* read_midi_from_serial_port(void* seq)
 
 main(int argc, char** argv)
 {
+    setResolution();
 	//arguments arguments;
 	struct termios oldtio, newtio;
 	struct serial_struct ser_info;
